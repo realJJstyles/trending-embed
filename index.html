@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trending Today</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f4f7fa;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+
+    .wrapper {
+      max-width: 900px;
+      margin: auto;
+      background: #ffffff;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      border-radius: 16px;
+      padding: 30px;
+    }
+
+    h1 {
+      font-size: 28px;
+      text-align: center;
+      margin-bottom: 25px;
+      color: #0e66c9;
+    }
+
+    .item {
+      border-bottom: 1px solid #e3e9f1;
+      padding: 16px 0;
+      transition: background 0.2s ease-in-out;
+    }
+
+    .item:hover {
+      background: #f0f4f8;
+    }
+
+    .item a {
+      font-size: 18px;
+      font-weight: 500;
+      color: #1a0dab;
+      text-decoration: none;
+    }
+
+    .item a:hover {
+      text-decoration: underline;
+    }
+
+    .timestamp {
+      text-align: center;
+      font-size: 13px;
+      color: #888;
+      margin-top: 20px;
+    }
+
+    @media (max-width: 600px) {
+      .wrapper {
+        padding: 20px;
+      }
+
+      .item a {
+        font-size: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <h1>🔥 Trending Today</h1>
+    <div id="content">Loading trending topics...</div>
+    <div class="timestamp" id="timestamp"></div>
+  </div>
+
+  <script>
+    async function fetchTrending() {
+      const feeds = [
+        "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",
+        "https://feeds.bbci.co.uk/news/rss.xml",
+        "https://www.npr.org/rss/rss.php?id=1001"
+      ];
+
+      const parser = new DOMParser();
+      let items = [];
+
+      for (let url of feeds) {
+        try {
+          const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+          const data = await res.json();
+          const doc = parser.parseFromString(data.contents, "text/xml");
+          const entries = Array.from(doc.querySelectorAll("item")).slice(0, 5);
+
+          entries.forEach(entry => {
+            items.push({
+              title: entry.querySelector("title").textContent,
+              link: entry.querySelector("link").textContent
+            });
+          });
+        } catch (err) {
+          console.warn("Feed fetch failed:", url);
+        }
+      }
+
+      // Randomize order
+      items.sort(() => Math.random() - 0.5);
+      const selected = items.slice(0, Math.floor(Math.random() * 7) + 7);
+
+      const html = selected.map(item => `
+        <div class="item">
+          <a href="${item.link}" target="_blank" rel="noopener noreferrer">${item.title}</a>
+        </div>
+      `).join("");
+
+      document.getElementById("content").innerHTML = html;
+
+      const now = new Date();
+      document.getElementById("timestamp").textContent =
+        "Last updated: " + now.toLocaleString("en-US", { timeZone: "America/Denver" });
+    }
+
+    fetchTrending();
+  </script>
+</body>
+</html>
