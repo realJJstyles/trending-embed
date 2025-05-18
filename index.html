@@ -1,56 +1,113 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Trending Highlights</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AdPulse: Image-Based Ads</title>
   <style>
-    body { font-family: Arial; padding: 10px; }
-    .item { padding: 8px; border-bottom: 1px solid #ddd; }
-    .item a { text-decoration: none; color: #1a0dab; }
+    body {
+      background-color: #1a1a1a;
+      color: #ffffff;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    h2 {
+      color: #ffffff;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background-color: #2a2a2a;
+      padding: 15px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+    .card img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+    .card a {
+      display: block;
+      margin-top: 10px;
+      color: #4da6ff;
+      text-decoration: none;
+    }
   </style>
 </head>
 <body>
-  <h2>🔥 Trending Now</h2>
-  <div id="content">Loading...</div>
+  <h2>🔥 Trending Ad Highlights</h2>
+  <div class="grid" id="content">Loading...</div>
 
   <script>
-    async function fetchTrending() {
+    async function fetchFeed(url) {
+      try {
+        const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+        const data = await response.json();
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(data.contents, "text/xml");
+        return Array.from(xml.querySelectorAll("item"));
+      } catch (error) {
+        console.error("Error fetching feed:", url, error);
+        return [];
+      }
+    }
+
+    function extractImage(entry) {
+      const mediaContent = entry.querySelector("media\\:content, enclosure");
+      if (mediaContent && mediaContent.getAttribute("url")) {
+        return mediaContent.getAttribute("url");
+      }
+      const description = entry.querySelector("description");
+      if (description) {
+        const match = description.textContent.match(/<img.*?src=["'](.*?)["']/);
+        if (match) return match[1];
+      }
+      return null;
+    }
+
+    async function displayAds() {
       const feeds = [
-        "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",
-        "https://feeds.bbci.co.uk/news/rss.xml",
-        "https://www.npr.org/rss/rss.php?id=1001"
+        "https://cointelegraph.com/rss",
+        "https://decrypt.co/feed",
+        "https://cryptoslate.com/feed/",
+        "https://www.theverge.com/rss/index.xml",
+        "https://www.buzzfeed.com/index.xml"
       ];
-
-      const parser = new DOMParser();
-      let items = [];
-
-      for (let url of feeds) {
-        try {
-          const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-          const data = await res.json();
-          const doc = parser.parseFromString(data.contents, "text/xml");
-          const entries = Array.from(doc.querySelectorAll("item")).slice(0, 5);
-
-          entries.forEach(entry => {
-            items.push({
-              title: entry.querySelector("title").textContent,
-              link: entry.querySelector("link").textContent
+      
+      let allEntries = [];
+      for (const feed of feeds) {
+        const items = await fetchFeed(feed);
+        for (const item of items) {
+          const img = extractImage(item);
+          if (img) {
+            allEntries.push({
+              link: item.querySelector("link").textContent,
+              image: img
             });
-          });
-        } catch (err) {
-          console.log("Feed failed:", url);
+          }
         }
       }
 
-      // Shuffle and show top 7–13
-      items.sort(() => 0.5 - Math.random());
-      const selection = items.slice(0, Math.floor(Math.random() * 7) + 7);
-      const html = selection.map(item =>
-        `<div class="item"><a href="${item.link}" target="_blank">${item.title}</a></div>`
-      ).join("");
+      // Shuffle and select 7–13 random entries
+      allEntries.sort(() => 0.5 - Math.random());
+      const selection = allEntries.slice(0, Math.floor(Math.random() * 7) + 7);
+      const html = selection.map(item => `
+        <div class="card">
+          <a href="${item.link}" target="_blank">
+            <img src="${item.image}" alt="Ad Image" />
+          </a>
+        </div>
+      `).join("");
+
       document.getElementById("content").innerHTML = html;
     }
 
-    fetchTrending();
+    displayAds();
   </script>
 </body>
 </html>
