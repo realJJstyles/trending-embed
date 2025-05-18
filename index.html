@@ -1,47 +1,78 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>Trending Ad Highlights</title>
   <style>
     body {
+      background-color: #1f1f1f;
+      color: #ffffff;
       font-family: Arial, sans-serif;
-      background-color: #1e1e1e;
-      color: #f0f0f0;
       padding: 20px;
-      text-align: center;
     }
+
     h2 {
       color: #ffffff;
+      text-align: center;
+      margin-bottom: 30px;
     }
+
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 20px;
-      max-width: 1200px;
-      margin: 0 auto;
     }
-    .ad-card img {
-      width: 100%;
-      height: auto;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(255, 255, 255, 0.1);
+
+    .item {
+      background-color: #2a2a2a;
+      padding: 10px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
       transition: transform 0.3s ease;
     }
-    .ad-card img:hover {
+
+    .item:hover {
       transform: scale(1.03);
+    }
+
+    .item img {
+      width: 100%;
+      border-radius: 8px;
+      height: 140px;
+      object-fit: cover;
+    }
+
+    .item a {
+      text-decoration: none;
+      color: #ffffff;
+      display: block;
+      text-align: center;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+
+    .loading {
+      text-align: center;
+      font-size: 18px;
+      margin-top: 40px;
+      color: #cccccc;
     }
   </style>
 </head>
 <body>
   <h2>🔥 Trending Ad Highlights</h2>
-  <div id="content" class="grid">Loading ads...</div>
+  <div id="content" class="grid">
+    <div class="loading">Loading ads...</div>
+  </div>
 
   <script>
-    async function fetchTrending() {
+    async function fetchFeeds() {
       const feeds = [
-        "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",
-        "https://feeds.bbci.co.uk/news/rss.xml",
-        "https://www.npr.org/rss/rss.php?id=1001"
+        "https://cointelegraph.com/rss",
+        "https://decrypt.co/feed",
+        "https://cryptoslate.com/feed/",
+        "https://www.theverge.com/rss/index.xml",
+        "https://www.buzzfeed.com/index.xml"
       ];
 
       const parser = new DOMParser();
@@ -52,48 +83,42 @@
           const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
           const data = await res.json();
           const doc = parser.parseFromString(data.contents, "text/xml");
-          const entries = Array.from(doc.querySelectorAll("item")).slice(0, 5);
+          const entries = Array.from(doc.querySelectorAll("item")).slice(0, 6);
 
           entries.forEach(entry => {
-            const title = entry.querySelector("title").textContent;
-            const link = entry.querySelector("link").textContent;
-            let imageUrl = null;
+            const title = entry.querySelector("title")?.textContent || "";
+            const link = entry.querySelector("link")?.textContent || "#";
+            const description = entry.querySelector("description")?.textContent || "";
 
-            const media = entry.querySelector("media\\:content, enclosure");
-            if (media && media.getAttribute("url")) {
-              imageUrl = media.getAttribute("url");
-            } else {
-              const desc = entry.querySelector("description");
-              if (desc) {
-                const match = desc.textContent.match(/<img.*?src="(.*?)"/);
-                if (match && match[1]) {
-                  imageUrl = match[1];
-                }
-              }
-            }
+            // Try to extract image from description HTML
+            const imgMatch = description.match(/<img.*?src=["'](.*?)["']/);
+            const imageUrl = imgMatch ? imgMatch[1] : null;
 
             if (imageUrl) {
               items.push({ title, link, imageUrl });
             }
           });
         } catch (err) {
-          console.log("Feed failed:", url, err);
+          console.log("Error loading feed:", url);
         }
       }
 
+      // Shuffle and pick 7–13 random items
       items.sort(() => 0.5 - Math.random());
       const selection = items.slice(0, Math.floor(Math.random() * 7) + 7);
-      const html = selection.map(item =>
-        `<div class="ad-card">
+
+      const html = selection.map(item => `
+        <div class="item">
           <a href="${item.link}" target="_blank">
-            <img src="${item.imageUrl}" alt="${item.title}">
+            <img src="${item.imageUrl}" alt="${item.title}" loading="lazy">
           </a>
-        </div>`
-      ).join("");
-      document.getElementById("content").innerHTML = html;
+        </div>
+      `).join("");
+
+      document.getElementById("content").innerHTML = html || '<div class="loading">No images found from the feeds.</div>';
     }
 
-    fetchTrending();
+    fetchFeeds();
   </script>
 </body>
 </html>
