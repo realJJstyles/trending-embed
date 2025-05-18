@@ -1,79 +1,36 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Trending Today</title>
+  <title>Trending Highlights (Images)</title>
   <style>
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #eaeaea;
-      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #e6e6e6;
       padding: 20px;
-      color: #333;
-    }
-
-    .wrapper {
-      max-width: 900px;
-      margin: auto;
-      background: #eaeaea;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-      border-radius: 16px;
-      padding: 30px;
-    }
-
-    h1 {
-      font-size: 28px;
       text-align: center;
-      margin-bottom: 25px;
-      color: #0e66c9;
     }
-
-    .item {
-      border-bottom: 1px solid #e3e9f1;
-      padding: 16px 0;
-      transition: background 0.2s ease-in-out;
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
     }
-
-    .item:hover {
-      background: #f0f4f8;
+    .ad-card img {
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease;
     }
-
-    .item a {
-      font-size: 18px;
-      font-weight: 500;
-      color: #1a0dab;
-      text-decoration: none;
-    }
-
-    .item a:hover {
-      text-decoration: underline;
-    }
-
-    .timestamp {
-      text-align: center;
-      font-size: 13px;
-      color: #888;
-      margin-top: 20px;
-    }
-
-    @media (max-width: 600px) {
-      .wrapper {
-        padding: 20px;
-      }
-
-      .item a {
-        font-size: 16px;
-      }
+    .ad-card img:hover {
+      transform: scale(1.03);
     }
   </style>
 </head>
 <body>
-  <div class="wrapper">
-    <h1>🔥 Trending Today</h1>
-    <div id="content">Loading trending topics...</div>
-    <div class="timestamp" id="timestamp"></div>
-  </div>
+  <h2>🔥 Trending Ad Highlights</h2>
+  <div id="content" class="grid">Loading ads...</div>
 
   <script>
     async function fetchTrending() {
@@ -94,31 +51,42 @@
           const entries = Array.from(doc.querySelectorAll("item")).slice(0, 5);
 
           entries.forEach(entry => {
-            items.push({
-              title: entry.querySelector("title").textContent,
-              link: entry.querySelector("link").textContent
-            });
+            const title = entry.querySelector("title").textContent;
+            const link = entry.querySelector("link").textContent;
+            let imageUrl = null;
+
+            const media = entry.querySelector("media\\:content, enclosure");
+            if (media && media.getAttribute("url")) {
+              imageUrl = media.getAttribute("url");
+            } else {
+              const desc = entry.querySelector("description");
+              if (desc) {
+                const match = desc.textContent.match(/<img.*?src="(.*?)"/);
+                if (match && match[1]) {
+                  imageUrl = match[1];
+                }
+              }
+            }
+
+            if (imageUrl) {
+              items.push({ title, link, imageUrl });
+            }
           });
         } catch (err) {
-          console.warn("Feed fetch failed:", url);
+          console.log("Feed failed:", url, err);
         }
       }
 
-      // Randomize order
-      items.sort(() => Math.random() - 0.5);
-      const selected = items.slice(0, Math.floor(Math.random() * 7) + 7);
-
-      const html = selected.map(item => `
-        <div class="item">
-          <a href="${item.link}" target="_blank" rel="noopener noreferrer">${item.title}</a>
-        </div>
-      `).join("");
-
+      items.sort(() => 0.5 - Math.random());
+      const selection = items.slice(0, Math.floor(Math.random() * 7) + 7);
+      const html = selection.map(item =>
+        `<div class="ad-card">
+          <a href="${item.link}" target="_blank">
+            <img src="${item.imageUrl}" alt="${item.title}">
+          </a>
+        </div>`
+      ).join("");
       document.getElementById("content").innerHTML = html;
-
-      const now = new Date();
-      document.getElementById("timestamp").textContent =
-        "Last updated: " + now.toLocaleString("en-US", { timeZone: "America/Denver" });
     }
 
     fetchTrending();
